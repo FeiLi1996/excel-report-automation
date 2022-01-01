@@ -1,0 +1,258 @@
+Sub MacroOneClick()
+    
+
+    ' Deleting rows 1-9 begins
+    Range("A1:C9").Select
+    Selection.EntireRow.Delete
+    Range("A2").Select
+    Selection.EntireRow.Insert , CopyOrigin:=xlFormatFromLeftOrAbove
+    'Deleting rows 1-9 ends
+
+    ' Macro 1: Converting NDC to 11 digit format
+    Range("E1").Select
+    Selection.EntireColumn.Insert , CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("E1").Select
+    ActiveCell.FormulaR1C1 = "Reformatted NDC"
+    Range("E2").Select
+    Columns("E:E").EntireColumn.AutoFit
+    
+           'For column 5 and start at row 3
+    Dim rowsInColumn As Integer
+    Dim i As Integer
+    Dim j As Integer
+    Dim lengthDifference As Integer
+    
+    Dim columnOriginalNDC As Integer
+    Dim columnNumberGeneral As Integer
+    Dim ColumnReformattedNDC As Integer
+    Dim originalString As String
+    Dim stringPart1 As String
+    Dim stringPart2 As String
+    Dim stringPart3 As String
+    Dim elevenDigitNDC As String
+    
+    
+    columnOriginalNDC = 4
+    ColumnReformattedNDC = 5
+    columnNumberGeneral = 4
+    rowsInColumn = Application.WorksheetFunction.CountA(Columns(columnNumberGeneral))
+    rowsInColumn = rowsInColumn + 1
+
+    For i = 3 To rowsInColumn
+        originalString = Cells(i, columnOriginalNDC).Value
+        If Len(originalString) = 11 Then
+        
+            stringPart1 = Left(originalString, 5)
+            stringPart2 = Mid(originalString, 6, 4)
+            stringPart3 = Right(originalString, 2)
+            elevenDigitNDC = stringPart1 & "-" & stringPart2 & "-" & stringPart3
+            Cells(i, ColumnReformattedNDC).Value = elevenDigitNDC
+            
+            
+        Else
+            lengthDifference = 11 - Len(originalString)
+            
+           For j = 1 To lengthDifference
+                originalString = "0" & originalString
+                
+           Next j
+            stringPart1 = Left(originalString, 5)
+            stringPart2 = Mid(originalString, 6, 4)
+            stringPart3 = Right(originalString, 2)
+            elevenDigitNDC = stringPart1 & "-" & stringPart2 & "-" & stringPart3
+            Cells(i, ColumnReformattedNDC).Value = elevenDigitNDC
+        End If
+            
+    Next i
+    
+    
+    'Macro 1: Converting NDC to 11 digit format ENDS here
+    
+
+
+    'Macro 2: vlookup creation
+    
+    Columns("H:L").Select
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    ActiveWindow.SmallScroll Down:=-24
+    Range("H1").Select
+    ActiveCell.FormulaR1C1 = "Description"
+    Range("I1").Select
+    ActiveCell.FormulaR1C1 = "Item ID"
+    Range("J1").Select
+    ActiveCell.FormulaR1C1 = "Sequence"
+    Range("H2").Select
+
+    Dim partTwoLoop As Integer
+    Dim columnDescription As Integer
+    Dim columnItemID As Integer
+    Dim ColumnSequence As Integer
+    columnDescription = 8
+    columnItemID = 9
+    ColumnSequence = 10
+    
+    
+  
+    For partTwoLoop = 3 To rowsInColumn
+
+        Cells(partTwoLoop, columnDescription).FormulaR1C1 = "=VLOOKUP(RC[-3],Sheet2!C[-7]:C[-4],3,FALSE)"
+        Cells(partTwoLoop, columnItemID).FormulaR1C1 = "=IFERROR(VLOOKUP(RC[-4],Sheet2!C[-8]:C[-5],2,FALSE),""NOT FOUND"")"
+        Cells(partTwoLoop, ColumnSequence).FormulaR1C1 = "=IFERROR(VLOOKUP(RC[-5],Sheet2!C[-9]:C[-6],4,FALSE),""NOT FOUND"")"
+    Next partTwoLoop
+    
+    
+    'Macro 2: vlookup creation Ends
+    
+    
+   
+
+    'Macro 3: True Qty
+
+
+    Dim partThreeLoop As Integer
+    Dim invoicedQty As Long
+    Dim netQty As Long
+    Dim invoicedQtyDoses As Long
+    Dim trueInvoiceQty As Long
+    
+    Cells(1, 11).Value = "trueInvoiceQty"
+    For partThreeLoop = 3 To rowsInColumn
+
+        If IsEmpty(Cells(partThreeLoop, 13).Value) = True Then
+            
+            Exit For
+        End If
+        
+        invoicedQty = Cells(partThreeLoop, 13).Value
+
+        If invoicedQty = 0 Then
+            invoicedQty = 1
+        End If
+        
+            
+        netQty = Cells(partThreeLoop, 14).Value
+        invoicedQtyDoses = Cells(partThreeLoop, 18).Value
+        trueInvoiceQty = (invoicedQtyDoses / invoicedQty) * netQty
+        Cells(partThreeLoop, 11).Value = trueInvoiceQty
+
+        
+        
+    Next partThreeLoop
+    'Macro 3: True Qty  Ends here
+
+
+
+'Macro 4: Sort and identify Status Starts Here
+'
+
+    Cells(1, 12).Value = "Status"
+
+    MsgBox ("Total rows of data:" & rowsInColumn)
+     
+    Range("A1:AF" & rowsInColumn).Select
+    ActiveWorkbook.Worksheets("Orig Purchase").Sort.SortFields.Add Key:=Range("I2:I" & rowsInColumn _
+        ), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+    ActiveWorkbook.Worksheets("Orig Purchase").Sort.SortFields.Add Key:=Range("K2:K" & rowsInColumn _
+        ), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+    With ActiveWorkbook.Worksheets("Orig Purchase").Sort
+        .SetRange Range("A1:AF" & rowsInColumn)
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+    
+
+    
+    Dim rowbelow As Integer
+    Dim thatItemIdCount As Integer
+    Dim loopOneCounter As Integer
+    Dim loop2Counter As Integer
+    Dim loop3Counter As Integer
+    
+    Dim columnStatus As Integer
+
+    columnStatus = 12
+    
+
+
+   For loopOneCounter = 2 To rowsInColumn
+
+        If Cells(loopOneCounter, ColumnSequence).Value = "NOT FOUND" Then
+        
+            MsgBox ("Analysis Ends At " & loopOneCounter & " Because of  NOT FOUND")
+            Exit For
+            
+        End If
+        
+        rowBelowForLoop2 = loopOneCounter + 1
+	
+        If Cells(loopOneCounter, columnItemID).Value <> Cells(rowBelowForLoop2, columnItemID).Value  And Cells(loopOneCounter, 11).Value > 0 Then
+    
+            If Cells(loopOneCounter, ColumnSequence).Value = 1 Then
+                Cells(loopOneCounter, columnStatus).Value = "Ok"
+            Else
+		
+                Cells(loopOneCounter, columnStatus).Value = "Update"
+		Cells(loopOneCounter, columnStatus).Interior.ColorIndex = 8
+            End If
+          
+        
+        Else
+    
+            thatItemIdCount = 1
+          
+            If Cells(loopOneCounter, ColumnSequence).Value = 1 And Cells(loopOneCounter, 11).Value <> Cells(rowBelowForLoop2, 11).Value And Cells(loopOneCounter, 11).Value > 0 Then
+                Cells(loopOneCounter, columnStatus).Value = "Ok"
+            ElseIf Cells(loopOneCounter, ColumnSequence).Value <>1 And Cells(loopOneCounter, 11).Value <> Cells(rowBelowForLoop2, 11).Value And Cells(loopOneCounter, 11).Value > 0 Then
+                Cells(loopOneCounter, columnStatus).Value = "Update"
+		Cells(loopOneCounter, columnStatus).Interior.ColorIndex = 8
+
+	    Else 
+		If Cells(loopOneCounter, 11).Value  <=0 Then
+			Cells(loopOneCounter, columnStatus).Value = "NA"	
+		Else
+			Cells(loopOneCounter, columnStatus).Value = "Multiple"
+			Cells(loopOneCounter, columnStatus).Interior.ColorIndex = 3
+		End If
+            End If
+    
+            For loop2Counter = loopOneCounter To rowsInColumn
+                If Cells(loopOneCounter, columnItemID).Value = Cells(rowBelowForLoop2, columnItemID).Value Then
+    
+                    thatItemIdCount = thatItemIdCount + 1
+                    rowBelowForLoop2 = rowBelowForLoop2 + 1
+                   
+                Else
+                   
+                    loopOneCounter = loopOneCounter + thatItemIdCount - 1
+                    Exit For
+                End If
+            Next loop2Counter
+        End If
+    Next loopOneCounter
+    For loop3Counter = 2 To rowsInColumn
+        If IsEmpty(Cells(loop3Counter, columnStatus).Value) = True Then
+        
+            Cells(loop3Counter, columnStatus).Value = "NA"
+        
+        
+        End If
+
+	If  Cells(loop3Counter, 14).Value =2 Then
+            
+            Cells(loop3Counter, columnItemID).Value = "No net purchase"
+            Cells(loop3Counter, columnItemID).Interior.ColorIndex = 46
+        
+        End If
+	
+    Next loop3Counter
+
+
+'Macro 4: Sort and identify Status Ends Here
+
+
+End Sub
+
