@@ -6,10 +6,8 @@ The programming language is VBA. Do consider that I wrote these codes before I t
 
 I know how I can improve the code:
 
--Create functions so that I don't repeat code.
-
--Create more constant variables
-
+-Create functions so that I don't repeat code. <br>
+-Create more constant variables<br>
 -etc
 
 
